@@ -19,9 +19,9 @@
   "tooling": {
     "presets": [
       [
-        "react",
+        "web",
         {
-          "entry": "example/react/index.js"
+          "entry": "example/typescript/index.ts"
         }
       ]
     ]

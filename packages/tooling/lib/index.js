@@ -3,6 +3,8 @@
 const chalk = require('chalk')
 const config = require('conpack')
 const PostCompilePlugin = require('post-compile-webpack-plugin')
+const path = require('path')
+const fs = require('fs')
 const _ = require('./utils')
 
 module.exports = function (options) {
@@ -40,6 +42,30 @@ module.exports = function (options) {
 
   return config.toConfig()
 
+  function findPresetPath(name) {
+    const presetName = `tooling-preset-${name}`
+    const possiblePaths = [
+      _.cwd('node_modules', presetName),
+      path.resolve(__dirname, '../../', presetName),
+      path.resolve(process.cwd(), 'packages', presetName)
+    ]
+
+    for (const p of possiblePaths) {
+      if (fs.existsSync(p)) {
+        const pkgPath = path.join(p, 'package.json')
+        if (fs.existsSync(pkgPath)) {
+          return p
+        }
+        const indexPath = path.join(p, 'index.js')
+        if (fs.existsSync(indexPath)) {
+          return indexPath
+        }
+      }
+    }
+
+    return null
+  }
+
   function loadPreset(name, presetOptions) {
     const context = {
       config,
@@ -48,6 +74,16 @@ module.exports = function (options) {
       inherit: loadPreset
     }
 
-    require(_.cwd('node_modules', `tooling-preset-${name}`))(context)
+    const presetPath = findPresetPath(name)
+    if (presetPath) {
+      require(presetPath)(context)
+    } else {
+      try {
+        require(_.cwd('node_modules', `tooling-preset-${name}`))(context)
+      } catch (err) {
+        console.error(chalk.red(`Error loading preset '${name}': ${err.message}`))
+        throw err
+      }
+    }
   }
 }
